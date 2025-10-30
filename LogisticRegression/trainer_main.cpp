@@ -10,12 +10,27 @@
 #include <cstdlib>
 #include <cstring>
 
-static double wall_now() {
+using Scalar = float;
+
+#include <type_traits>
+
+template <typename T>
+constexpr std::string type_name() 
+{
+    if (std::is_same<T, float>::value) return "float";
+    else if (std::is_same<T, double>::value) return "double";
+    else if (std::is_same<T, long double>::value) return "long double";
+    else return "unknown";
+}
+
+static double wall_now() 
+{
     using clock = std::chrono::steady_clock;
     return std::chrono::duration<double>(clock::now().time_since_epoch()).count();
 }
 
-static double cpu_now() {
+static double cpu_now() 
+{
     rusage ru{};
     getrusage(RUSAGE_SELF, &ru);
     double ut = ru.ru_utime.tv_sec + ru.ru_utime.tv_usec/1e6;
@@ -23,7 +38,8 @@ static double cpu_now() {
     return ut + st;
 }
 
-static double peak_rss_mb() {
+static double peak_rss_mb() 
+{
     rusage ru{};
     getrusage(RUSAGE_SELF, &ru);
 #if defined(__APPLE__) && defined(__MACH__)
@@ -51,7 +67,9 @@ static const char* get_arg(char** begin, char** end, const std::string& flag, co
     return def;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
+    std::cout << "Using Scalar type: " << type_name<Scalar>() << "\n";
     // Required args
     const char* train_x_path = get_arg(argv, argv+argc, std::string("--train_x"));
     const char* train_y_path = get_arg(argv, argv+argc, std::string("--train_y"));
@@ -67,18 +85,24 @@ int main(int argc, char** argv) {
     const float lambda = std::atof(get_arg(argv, argv+argc, std::string("--lambda"), "1e-4"));
     const unsigned seed= std::atoi(get_arg(argv, argv+argc, std::string("--seed"),   "42"));
 
-    if (!train_x_path || !train_y_path || !test_x_path || !test_y_path) {
+    if (!train_x_path || !train_y_path || !test_x_path || !test_y_path) 
+    {
         std::cerr << "Missing --train_x/--train_y/--test_x/--test_y\n";
         return 2;
     }
 
-    std::vector<float> Xtr, Xte;
+    std::vector<float> Xtr_f32, Xte_f32;
     std::vector<int32_t> ytr_i32, yte_i32;
 
-    if (!read_bin<float>(train_x_path, Xtr)) { std::cerr<<"Failed "<<train_x_path<<"\n"; return 3; }
+    if (!read_bin<float>(train_x_path, Xtr_f32)) { std::cerr<<"Failed "<<train_x_path<<"\n"; return 3; }
     if (!read_bin<int32_t>(train_y_path, ytr_i32)) { std::cerr<<"Failed "<<train_y_path<<"\n"; return 3; }
-    if (!read_bin<float>(test_x_path, Xte)) { std::cerr<<"Failed "<<test_x_path<<"\n"; return 3; }
+    if (!read_bin<float>(test_x_path, Xte_f32)) { std::cerr<<"Failed "<<test_x_path<<"\n"; return 3; }
     if (!read_bin<int32_t>(test_y_path, yte_i32)) { std::cerr<<"Failed "<<test_y_path<<"\n"; return 3; }
+
+    std::vector<Scalar> Xtr(Xtr_f32.begin(), Xtr_f32.end());
+    std::vector<Scalar> Xte(Xte_f32.begin(), Xte_f32.end());
+    std::vector<int>    ytr(ytr_i32.begin(), ytr_i32.end());
+    std::vector<int>    yte(yte_i32.begin(), yte_i32.end());
 
     const int Ntr = (int)(Xtr.size() / D);
     const int Nte = (int)(Xte.size() / D);
@@ -87,18 +111,15 @@ int main(int argc, char** argv) {
         std::cerr << "Shape mismatch; check D and file sizes.\n"; return 4;
     }
 
-    // Cast labels to int
-    std::vector<int> ytr(Ntr), yte(Nte);
-    for (int i=0;i<Ntr;++i) ytr[i] = (int)ytr_i32[i];
-    for (int i=0;i<Nte;++i) yte[i] = (int)yte_i32[i];
-
-    SoftmaxSGD model(D, K, lambda);
+   // Model init
+    SoftmaxSGD<Scalar> model(D, K, Scalar(lambda));
     model.init(seed);
 
     // Train (time just the epochs)
     double w0 = wall_now(), c0 = cpu_now();
     float last_train_loss = 0.f;
-    for (int e=1; e<=epochs; ++e) {
+    for (int e=1; e<=epochs; ++e) 
+    {
         last_train_loss = model.train_one_epoch(Xtr.data(), ytr.data(), Ntr, bs, lr, seed + (unsigned)e);
     }
     double c1 = cpu_now(), w1 = wall_now();
