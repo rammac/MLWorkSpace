@@ -131,7 +131,7 @@ def main():
 
     # Run C++ fused SGD (multinomial softmax)
     cpp = run_cpp_trainer(Xtrz, ytr, Xtez, yte,
-                          exe="./trainer_main",
+                          exe="./bin/trainer_main",
                           epochs=10, bs=1024, lr=0.1, lamb=1e-4, seed=42)
     print("c++    :", cpp)
 
