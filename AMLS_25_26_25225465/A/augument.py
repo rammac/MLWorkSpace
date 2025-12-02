@@ -19,6 +19,7 @@ class RandomAugmenter(BaseEstimator, TransformerMixin):
                  noise_p: float = 0.2,
                  gamma_p: float = 0.2,
                  random_state: int | None = 0):
+        self._fit_rng = None
         self.enabled = enabled
         self.rot_deg = rot_deg
         self.hflip_p = hflip_p
@@ -66,7 +67,8 @@ class RandomAugmenter(BaseEstimator, TransformerMixin):
         self._fit_rng = self._rng()
         return self
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(self, X:np.ndarray, y: np.ndarray | None = None, **fit_params) -> np.ndarray:
+        self.fit(X, y)
         if not self.enabled:
             return X
         rng = self._fit_rng

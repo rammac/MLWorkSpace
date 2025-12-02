@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from A import SVMHOGClassifier
-from A import run_data_analysis, remove_row_from_dataset
+from A import run_data_analysis, remove_row_from_dataset, BREASTMNIST_SVM_HOG_PARAMS
 
 
 # --------------------- logging ---------------------
@@ -89,8 +89,8 @@ def run():
     if 'train_duplicates_indices' in data_processing_hints:
         train_dup_indices = data_processing_hints['train_duplicates_indices']
         logger.info(f"Removing {len(train_dup_indices)} duplicate samples from training set...")
-        Xtr = remove_row_from_dataset(Xtr, train_dup_indices)
-        ytr = remove_row_from_dataset(ytr, train_dup_indices)
+        Xtr = np.asarray(remove_row_from_dataset(Xtr, train_dup_indices))
+        ytr = np.asarray(remove_row_from_dataset(ytr, train_dup_indices))
         logger.info(f"New training set size: {len(Xtr)}")
 
     # Combine train+val for CV; keep test untouched
@@ -98,8 +98,8 @@ def run():
     ytrva = np.concatenate([ytr, yva], axis=0)
     logger.info("CV dataset size (train+val): %d", len(Xtrva))
 
-    logger.info("Training SVM + HOG classifier with cross-validation...")
-    model = SVMHOGClassifier(random_state=0, cv_splits=5, n_jobs=-1, logger=logger)
+    logger.info("Training SVM + HOG classifier with BestHyperparameters/ set param_grid=None to select again")
+    model = SVMHOGClassifier(random_state=0, cv_splits=5, n_jobs=-1, param_grid=BREASTMNIST_SVM_HOG_PARAMS, logger=logger)
     model.fit(Xtrva, ytrva, refit_metric="f1")
 
     best = model.best_params()

@@ -95,3 +95,20 @@ def run_data_analysis(splits, logger = None):
             logger.warning(f"Option to remove duplicates from training set, using indices: {train_dup_indices}")
             data_post_processing_hints['train_duplicates_indices'] = train_dup_indices
     return  data_post_processing_hints
+
+# Pre-Learned Hyperparameters for SVM-HOG on BreastMNIST
+BREASTMNIST_SVM_HOG_PARAMS = {
+    "pca__n_components": [64],
+    "pca__whiten": [False],
+    "svc__C": [100],
+    "svc__gamma": [0.0019306977288832496],   
+    "hog__orientations": [8],
+    "hog__pixels_per_cell": [(4, 4)],
+    "hog__cells_per_block": [(2, 2)],
+    "aug__enabled": [True],               # toggles augmentation
+    "aug__rot_deg": [0],                 # medical-friendly
+    "aug__hflip_p": [0.0],
+    "aug__blur_p": [0.2],
+    "aug__noise_p": [0.2],
+    "aug__gamma_p": [0.2],
+}   

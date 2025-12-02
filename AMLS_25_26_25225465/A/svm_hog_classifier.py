@@ -60,13 +60,11 @@ class SVMHOGClassifier:
         self.pipeline = Pipeline(
             steps=[
                 ("aug", RandomAugmenter(enabled=True, random_state=random_state,
-                            rot_deg=15.0, hflip_p=0.5, blur_p=0.2, noise_p=0.2, gamma_p=0.2)),
+                             rot_deg=15.0, hflip_p=0.5, blur_p=0.2, noise_p=0.2, gamma_p=0.2)),
                 ("hog", HOGTransformer()),
                 ("scaler", StandardScaler(with_mean=True, with_std=True)),
                 ("pca", PCA(svd_solver="full", random_state=random_state)),
-                (
-                    "svc",
-                    SVC(
+                ("svc", SVC(
                         kernel="rbf",
                         probability=False,
                         class_weight="balanced",
@@ -77,7 +75,7 @@ class SVMHOGClassifier:
             memory=self.memory,
         )
 
-        # Sensible defaults for 28x28 + HOG features
+        # defaults for 28x28 + HOG features
         if param_grid is None:
             self.param_grid = {
                 "pca__n_components": [None, 32, 64, 128],
@@ -88,17 +86,15 @@ class SVMHOGClassifier:
                  "hog__orientations": [8, 9],
                  "hog__pixels_per_cell": [(4, 4), (6, 6)],
                  "hog__cells_per_block": [(2, 2)],
+                # Augmentation params handled in augmenter
+                "aug__enabled": [False, True],               # toggles augmentation
+                "aug__rot_deg": [0, 10, 15],                 # medical-friendly
+                "aug__hflip_p": [0.0, 0.5],
+                # still optional but expensive:
+                "aug__blur_p": [0.0, 0.2],
+                "aug__noise_p": [0.0, 0.2],
+                "aug__gamma_p": [0.0, 0.2],
             }
-            # default param_grid addition for augmentation
-            self.param_grid.update({
-            "aug__enabled": [False, True],               # toggles augmentation
-            "aug__rot_deg": [0, 10, 15],                 # medical-friendly
-            "aug__hflip_p": [0.0, 0.5],
-            # still optional but expensive:
-            "aug__blur_p": [0.0, 0.2],
-            "aug__noise_p": [0.0, 0.2],
-            "aug__gamma_p": [0.0, 0.2],
-            })
             logger.info("Using default param_grid with %d combinations",
                         np.prod([len(v) for v in self.param_grid.values()]))
         else:
@@ -150,35 +146,22 @@ class SVMHOGClassifier:
         y_pred = self.predict(X_test)
         try:
             scores = self.decision_function(X_test)
-            roc = roc_auc_score(y_test, scores)
+            roc = float(roc_auc_score(y_test, scores))
         except Exception:
             roc = None
-        acc = accuracy_score(y_test, y_pred)
+        acc = float(accuracy_score(y_test, y_pred))
         prec, rec, f1, _ = precision_recall_fscore_support(
             y_test, y_pred, average="binary", zero_division=0
         )
+        prec, rec, f1 = float(prec), float(rec), float(f1)
         conf = confusion_matrix(y_test, y_pred)
         return EvalResults(acc, prec, rec, f1, roc, conf)
 
     def best_params(self) -> Dict:
         self._check_fitted()
+        if self.grid_ is None:
+            raise RuntimeError("Grid search not complete. Need to execute .fit(...)")
         return self.grid_.best_params_
-
-    def cv_table(self):
-        import pandas as pd
-        self._check_fitted()
-        cols = [
-            "mean_test_f1",
-            "mean_test_accuracy",
-            "mean_test_roc_auc",
-            "param_pca__n_components",
-            "param_pca__whiten",
-            "param_svc__C",
-            "param_svc__gamma",
-            "rank_test_f1",
-        ]
-        df = pd.DataFrame(self.grid_.cv_results_)[cols].sort_values("rank_test_f1")
-        return df
 
     # --------------------- internals ---------------------
     def _check_fitted(self) -> None:
