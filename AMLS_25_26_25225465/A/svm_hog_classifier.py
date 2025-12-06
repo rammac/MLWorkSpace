@@ -1,7 +1,6 @@
 ### A/svm_hog_classifier.py
 
 from __future__ import annotations
-from dataclasses import dataclass
 from typing import Dict, Optional
 import logging
 import numpy as np
@@ -18,18 +17,10 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 from joblib import Memory
+
+from EvalResults import EvalResults
 from .hog_transformer import HOGTransformer
 from .augument import RandomAugmenter
-
-
-@dataclass
-class EvalResults:
-    accuracy: float
-    precision: float
-    recall: float
-    f1: float
-    roc_auc: Optional[float]
-    confusion: np.ndarray
 
 
 class SVMHOGClassifier:
@@ -94,11 +85,12 @@ class SVMHOGClassifier:
                 "aug__blur_p": [0.0, 0.2],
                 "aug__noise_p": [0.0, 0.2],
                 "aug__gamma_p": [0.0, 0.2],
-            }
-            logger.info("Using default param_grid with %d combinations",
-                        np.prod([len(v) for v in self.param_grid.values()]))
+            } 
         else:
             self.param_grid = param_grid
+
+        logger.info("Using default param_grid with %d combinations",
+                        np.prod([len(v) for v in self.param_grid.values()]))    
 
         self.grid_: Optional[GridSearchCV] = None
         self.best_model_: Optional[Pipeline] = None

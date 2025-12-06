@@ -4,14 +4,15 @@ import hashlib
 from tabulate import tabulate
 from typing import List
 
-from .svm_hog_classifier import SVMHOGClassifier, EvalResults
+from .svm_hog_classifier import SVMHOGClassifier
 from .hog_transformer import HOGTransformer
 from .augument import RandomAugmenter
-__all__ = ["SVMHOGClassifier", "EvalResults", "HOGTransformer", "RandomAugmenter"]
+from EvalResults import EvalResults
+__all__ = ["SVMHOGClassifier", "HOGTransformer", "RandomAugmenter"]
 
 import torch
 from torch.utils.data import Subset
-from torch.utils.data import Dataset # Import for type hinting
+from torch.utils.data import Dataset
 
 def remove_row_from_dataset(dataset: Dataset, index_to_remove: List[int]) -> Dataset:
     original_length = len(dataset)
@@ -48,12 +49,12 @@ def ds_to_df(ds_x, ds_y, labels_dict, split_name, max_rows=None):
         })
     return pd.DataFrame(rows)
 
-def run_data_analysis(splits, logger = None):
+def run_data_analysis(Xtr, ytr, Xva, yva, Xte, yte, labels_dict, logger = None):
     data_post_processing_hints = {}
-    Xtr, ytr = splits["train"]
-    Xva, yva = splits["val"]
-    Xte, yte = splits["test"]
-    labels_dict = splits["labels"]
+    #Xtr, ytr = splits["train"]
+    #Xva, yva = splits["val"]
+    #Xte, yte = splits["test"]
+    #labels_dict = splits["labels"]
 
     train_df = ds_to_df(Xtr, ytr, labels_dict, "train")
     val_df   = ds_to_df(Xva, yva, labels_dict, "val")
@@ -112,3 +113,29 @@ BREASTMNIST_SVM_HOG_PARAMS = {
     "aug__noise_p": [0.2],
     "aug__gamma_p": [0.2],
 }   
+
+
+def display_results(results: EvalResults, logger=None):
+    metrics = {
+    "accuracy":  float(results.accuracy),
+    "precision": float(results.precision),
+    "recall":    float(results.recall),
+    "f1":        float(results.f1),
+    }
+    if getattr(results, "roc_auc", None) is not None:
+        metrics["roc_auc"] = float(results.roc_auc)
+
+    metrics_df = pd.DataFrame(list(metrics.items()), columns=["Metric", "Value"])
+    table_string = tabulate(metrics_df, headers="keys", tablefmt="psql", showindex=True)
+    logger.info(f"Results and observations:\n{table_string}")
+
+    if getattr(results, "confusion", None) is not None:
+        cm = np.asarray(results.confusion)
+        if cm.ndim == 2:
+            cm_df = pd.DataFrame(cm,
+                                index=[f"True {i}" for i in range(cm.shape[0])],
+                                columns=[f"Pred {j}" for j in range(cm.shape[1])])
+            #logger.info("\nConfusion matrix:\n%s", cm_df.to_string())
+            table_string = tabulate(cm_df, headers="keys", tablefmt="psql", showindex=True)
+            logger.info(f"Confusion matrix:\n{table_string}")
+
