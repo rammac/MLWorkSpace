@@ -50,12 +50,7 @@ def ds_to_df(ds_x, ds_y, labels_dict, split_name, max_rows=None):
     return pd.DataFrame(rows)
 
 def run_data_analysis(Xtr, ytr, Xva, yva, Xte, yte, labels_dict, logger = None):
-    data_post_processing_hints = {}
-    #Xtr, ytr = splits["train"]
-    #Xva, yva = splits["val"]
-    #Xte, yte = splits["test"]
-    #labels_dict = splits["labels"]
-
+    data_post_processing_hints = {}   
     train_df = ds_to_df(Xtr, ytr, labels_dict, "train")
     val_df   = ds_to_df(Xva, yva, labels_dict, "val")
     test_df  = ds_to_df(Xte, yte, labels_dict, "test")

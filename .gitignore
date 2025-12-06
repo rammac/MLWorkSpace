@@ -4,6 +4,7 @@ LogisticRegression/bin
 # ignore datasets in coursework
 AMLS_25_26_25225465/Datasets/*
 !AMLS_25_26_25225465/Datasets/.gitkeep
+AMLS_25_26_25225465/breastmnist*.keras
 
 # Python cache/junk everywhere
 **/__pycache__/

@@ -1,1 +1,2 @@
 from .cnn_classifier import CNNClassifier
+from .cnn_efficientnetb0 import CNNEfficientNetB0

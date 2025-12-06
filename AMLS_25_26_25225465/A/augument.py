@@ -10,7 +10,7 @@ from skimage.exposure import adjust_gamma
 
 class RandomAugmenter(BaseEstimator, TransformerMixin):
     """Apply light medical-friendly augmentations at fit-time only.
-    Keeps sample count the same (one random augmentation per sample)."""
+    Keeps sample count the same /one random augmentation per sample"""
     def __init__(self,
                  enabled: bool = True,
                  rot_deg: float = 15.0,

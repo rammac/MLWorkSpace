@@ -13,14 +13,14 @@ from typing import Any, cast, Optional
 from A import SVMHOGClassifier
 from A import run_data_analysis, remove_row_from_dataset, BREASTMNIST_SVM_HOG_PARAMS, display_results
 
-from B import CNNClassifier
+from B import CNNClassifier, CNNEfficientNetB0
 
 
 # --------------------- logging ---------------------
 
 def configure_logging(level: int = logging.INFO, Model_name="Model-X") -> logging.Logger:
     logger = logging.getLogger()
-    # Avoid duplicate handlers when running in notebooks or reloads
+    # just to avoid duplicate handlers when running in notebooks or reloads
     if logger.handlers:
         for h in list(logger.handlers):
             logger.removeHandler(h)
@@ -45,10 +45,9 @@ def parse_args():
 
 # --------------------- data loading ---------------------
 
-def load_breastmnist(root_dir: str = "Datasets"):
-    """Try MedMNIST loader first; fallback to generic npz/CSV if medmnist is absent."""
-    root = Path(root_dir)
-    if not root.exists():
+def load_breastmnist(data_dir: str = "Datasets"):
+    root = os.path.join(Path.cwd(), Path(data_dir))
+    if not os.path.exists(root):
         raise FileNotFoundError(f"Dataset root not found: {root}")
 
     # Try MedMNIST (official splits)
@@ -102,11 +101,6 @@ def load_data():
 def run_model_A(Xtr, ytr, Xva, yva, Xte, yte, labels_dict):
     args = parse_args()
     logger_a = configure_logging(Model_name="Model-A")
-    #splits = load_breastmnist()
-    #Xtr, ytr = splits["train"]
-    #Xva, yva = splits["val"]
-    #Xte, yte = splits["test"]
-    #labels_dict = splits["labels"]
     logger_a.info("Loaded: train=%d, val=%d, test=%d, labels=%d", len(Xtr), len(Xva), len(Xte), len(labels_dict))
 
     data_processing_hints = run_data_analysis(Xtr, ytr, Xva, yva, Xte, yte, labels_dict, logger=logger_a)
@@ -166,8 +160,6 @@ def run_model_A(Xtr, ytr, Xva, yva, Xte, yte, labels_dict):
 
 def run_model_B(Xtr, ytr, Xva, yva, Xte, yte, labels_dict):
     # CNN model-B
-    # Instantiate Model B (small CNN)
-    # class weights (keep)
     logger_b = configure_logging(Model_name="Model-B")
     counts = np.bincount(ytr)
     class_weight = {i: (len(ytr)/(2.0*counts[i])) for i in range(len(counts))}
@@ -193,8 +185,31 @@ def run_model_B(Xtr, ytr, Xva, yva, Xte, yte, labels_dict):
     display_results(metrics_test_B, logger=logger_b)
     modelB.display_training_history()
 
+def run_model_B_1(Xtr, ytr, Xva, yva, Xte, yte, labels_dict):
+    logger_e0 = configure_logging(Model_name="Model-EfficientNetB0")
+    modelE0 = CNNEfficientNetB0(
+        input_shape=(28, 28, 1),
+        batch_size=64,
+        epochs=10,
+        patience_es=3,
+        patience_lr=2,
+        lr=1e-3,
+        logger=logger_e0,
+    )
+    modelE0.set_data(Xtr, ytr, Xva, yva, Xte, yte)
+    modelE0.fit()
+    modelE0.display_training_history()
+    pass
+
 if __name__ == "__main__":
-    print("Starding main.py...")
+    main_logger = configure_logging(level=logging.INFO, Model_name="Main")
+    main_logger.info("Starding main.py...")
     Xtr, ytr, Xva, yva, Xte, yte, labels_dict = load_data()
-    run_model_A(Xtr, ytr, Xva, yva, Xte, yte, labels_dict)
-    run_model_B(Xtr, ytr, Xva, yva, Xte, yte, labels_dict)
+    main_logger.info("Data loaded: train=%d, val=%d, test=%d", len(Xtr), len(Xva), len(Xte))
+    main_logger.info(f"Starting model run for Model A)")
+    run_model_A(Xtr, ytr, Xva, yva, Xte, yte, labels_dict) # A classical SVM + HOG based model
+    main_logger.info(f"Starting model run for Model B)")
+    run_model_B(Xtr, ytr, Xva, yva, Xte, yte, labels_dict) # A custom small CNN with shallow layers
+    main_logger.info(f"Starting model run for Model EfficientNetB0)")
+    run_model_B_1(Xtr, ytr, Xva, yva, Xte, yte, labels_dict) # A much better EfficientNetB0 based CNN
+    main_logger.info("main.py run completed.")

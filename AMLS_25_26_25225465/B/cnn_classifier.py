@@ -96,7 +96,7 @@ class CNNClassifier:
             ),
         ]
 
-        self.history_ = self.model.fit(
+        self.history_ = self.model.fit( # type: ignore
             X_train,
             y_train,
             validation_data=(X_val, y_val),
@@ -129,7 +129,7 @@ class CNNClassifier:
 
     def predict_proba(self, X, verbose=0):
         """Return probabilities P(y=1|x)."""
-        prob = self.model.predict(X, verbose=verbose).ravel()
+        prob = self.model.predict(X, verbose=verbose).ravel() # type: ignore
         return prob
 
     def predict(self, X, threshold=None, verbose=0):
